@@ -5,21 +5,16 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:fitsSystemWindows="true"
+    android:background="@color/colorPrimary"
     tools:context="xyz.leezoom.ssm.MainActivity">
-
-
-    <Switch
-        android:id="@+id/https_switch"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:text="@string/turn_on_https" />
 
     <ImageView
         android:id="@+id/image_view"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="9"/>
+        android:layout_weight="9"
+        android:fitsSystemWindows="true"/>
 
     <Button
         android:id="@+id/upload_bt"
@@ -31,11 +26,35 @@
         android:text="@string/uploadString"
         android:textAllCaps="false" />
 
-    <TextView
-        android:id="@+id/url_text"
+    <ProgressBar
+        android:id="@+id/process_bar"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
         android:visibility="gone"/>
+
+    <LinearLayout
+        android:id="@+id/show_url_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/url_text"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="4"
+            />
+
+        <Switch
+            android:id="@+id/https_switch"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_gravity="right" />
+
+    </LinearLayout>
+
 
 </LinearLayout>

@@ -2,4 +2,7 @@
     <string name="app_name">SSM</string>
     <string name="uploadString">Upload</string>
     <string name="turn_on_https">Turn on Https</string>
+    <string name="post_file_name">smfile</string>
+    <string name="switch_url_format">Switch</string>
+    <string name="click_me_pic">https://ooo.0o0.ooo/2017/09/26/59ca1d6132391.png</string>
 </resources>

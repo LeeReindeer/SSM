@@ -12,9 +12,9 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class UploadHelper {
 
-    private static SMUploadApi uploadApi;
+    private static SMMSApi uploadApi;
 
-    public static SMUploadApi init() {
+    public static SMMSApi getUploadApi() {
         if (uploadApi == null) {
             Retrofit retrofit = new Retrofit.Builder()
                     .baseUrl("https://sm.ms/api/")
@@ -22,7 +22,7 @@ public class UploadHelper {
                     .addConverterFactory(GsonConverterFactory.create())
                     .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
                     .build();
-            uploadApi = retrofit.create(SMUploadApi.class);
+            uploadApi = retrofit.create(SMMSApi.class);
         }
         return uploadApi;
     }

@@ -16,9 +16,13 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.bumptech.glide.Glide;
 
 import java.io.File;
 
@@ -27,7 +31,6 @@ import butterknife.ButterKnife;
 import butterknife.OnCheckedChanged;
 import butterknife.OnClick;
 import butterknife.OnLongClick;
-import io.reactivex.Observable;
 import io.reactivex.Observer;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
@@ -35,7 +38,7 @@ import io.reactivex.schedulers.Schedulers;
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
-import xyz.leezoom.ssm.model.SMUploadApi;
+import xyz.leezoom.ssm.model.SMMSApi;
 import xyz.leezoom.ssm.model.UploadHelper;
 import xyz.leezoom.ssm.model.gson.Upload;
 
@@ -43,9 +46,15 @@ public class MainActivity extends AppCompatActivity {
 
 
     private final static int REQUEST_PICK_PICTURE = 1;
+    private final static int SHOW_PROCESS = 11;
+    private final static int SHOW_URL_TEXT = 12;
+    private final static int INIT_VIEW = 13;
     private File file;
-    private boolean isHttps = true;
+    //private boolean isHttps = true;
+    private boolean isMarkDown = false;
 
+    @BindView(R.id.show_url_view)
+    LinearLayout urlLayout;
     @BindView(R.id.upload_bt)
     Button uploadButton;
     @BindView(R.id.image_view)
@@ -54,11 +63,12 @@ public class MainActivity extends AppCompatActivity {
     TextView urlText;
     @BindView(R.id.https_switch)
     Switch aSwitch;
+    @BindView(R.id.process_bar)
+    ProgressBar progressBar;
 
     private Upload mUpload;
-    private SMUploadApi uploadApi;
+    private SMMSApi uploadApi;
     private Disposable disposable;
-    private Observable<Upload> observable;
     private Observer<Upload> observer = new Observer<Upload>() {
         @Override
         public void onSubscribe(Disposable d) {
@@ -68,8 +78,11 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onNext(Upload upload) {
             mUpload = upload;
-            test();
-
+            if (mUpload.getStatus().equals("success")){
+                urlText.setText(mUpload.getData().getPicUrl());
+            } else if (mUpload.getStatus().equals("error")) {
+                urlText.setText(mUpload.getMsg());
+            }
         }
 
         @Override
@@ -80,7 +93,9 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onComplete() {
-
+            showView(SHOW_URL_TEXT);
+            ClipboardManager cmb = (ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+            cmb.setText(urlText.getText().toString().trim());
         }
     };
 
@@ -88,8 +103,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         ButterKnife.bind(this);
-        aSwitch.setChecked(true);
+        Glide.with(this)
+                .load(getString(R.string.click_me_pic))
+                .into(imageView);
+        aSwitch.setChecked(false);
     }
 
     @Override
@@ -103,13 +122,15 @@ public class MainActivity extends AppCompatActivity {
     @OnCheckedChanged(R.id.https_switch)
     void OnSwitchChecked(CompoundButton buttonView, boolean isChecked) {
         if (isChecked){
-            isHttps = true;
-            aSwitch.setText("Turn off Https");
+            isMarkDown = true;
+            //markdown
+            urlText.setText("![" + file.getName() + "]("
+                    + mUpload.getData().getPicUrl() + ")");
         } else {
-            isHttps = false;
-            aSwitch.setText(getString(R.string.turn_on_https));
+            //url
+            isMarkDown = false;
+            urlText.setText(mUpload.getData().getPicUrl());
         }
-        Log.d("Switch", isHttps + "");
     }
 
     @OnClick(R.id.image_view)
@@ -122,8 +143,7 @@ public class MainActivity extends AppCompatActivity {
             intent.setType("image/*");
             startActivityForResult(intent, REQUEST_PICK_PICTURE);
         }
-        urlText.setVisibility(View.GONE);
-        uploadButton.setVisibility(View.VISIBLE);
+        showView(INIT_VIEW);
     }
 
     @OnLongClick(R.id.url_text)
@@ -135,32 +155,24 @@ public class MainActivity extends AppCompatActivity {
 
     @OnClick(R.id.upload_bt)
     void uploadAction() {
-        Log.d("button","hi");
-        uploadInAction();
+        Log.d("button","start upload");
+        if (file != null) {
+            showView(SHOW_PROCESS);
+            uploadInAction();
+        } else {
+            Toast.makeText(MainActivity.this, "Please select picture", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void uploadInAction() {
-        uploadApi = UploadHelper.init();
-        if (file != null) {
-            //build http request header
-            RequestBody requestFile = RequestBody.create(MediaType.parse("multipart/form-data"), file);
-            MultipartBody.Part body = MultipartBody.Part.createFormData("smfile", file.getName(), requestFile);
-            uploadApi.uploadPicture(body, isHttps)
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(observer);
-        }
-    }
-
-    void test() {
-        if (mUpload.getStatus().equals("success")){
-            String u = mUpload.getData().getPicUrl();
-            urlText.setText(mUpload.getData().getPicUrl());
-        } else if (mUpload.getStatus().equals("error")) {
-            urlText.setText(mUpload.getMsg());
-        }
-        uploadButton.setVisibility(View.GONE);
-        urlText.setVisibility(View.VISIBLE);
+        uploadApi = UploadHelper.getUploadApi();
+        //build http request header
+        RequestBody requestFile = RequestBody.create(MediaType.parse("multipart/form-data"), file);
+        MultipartBody.Part body = MultipartBody.Part.createFormData(getString(R.string.post_file_name), file.getName(), requestFile);
+        uploadApi.uploadPicture(body)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(observer);
     }
 
     private void showPicture(Bitmap bitmap) {
@@ -168,6 +180,29 @@ public class MainActivity extends AppCompatActivity {
          //       .load(bitmap)
          //       .into(imageView);
         imageView.setImageBitmap(bitmap);
+    }
+
+    private void showView(int status) {
+        switch (status){
+            case INIT_VIEW:
+                uploadButton.setVisibility(View.VISIBLE);
+                urlLayout.setVisibility(View.GONE);
+                progressBar.setVisibility(View.GONE);
+                break;
+            case SHOW_PROCESS:
+                uploadButton.setVisibility(View.GONE);
+                urlLayout.setVisibility(View.GONE);
+                progressBar.setVisibility(View.VISIBLE);
+                break;
+            case SHOW_URL_TEXT:
+                uploadButton.setVisibility(View.GONE);
+                urlLayout.setVisibility(View.VISIBLE);
+                progressBar.setVisibility(View.GONE);
+                break;
+            default:
+                break;
+        }
+
     }
 
     @Override
@@ -195,6 +230,8 @@ public class MainActivity extends AppCompatActivity {
                         e.printStackTrace();
                         Toast.makeText(this, e.getMessage(),Toast.LENGTH_SHORT);
                     }
+                } else if (resultCode == RESULT_CANCELED && mUpload != null) {
+                    showView(SHOW_URL_TEXT);
                 }
                 break;
             default:
