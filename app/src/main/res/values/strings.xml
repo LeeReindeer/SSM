@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">SSM</string>
+    <string name="uploadString">Upload</string>
+    <string name="turn_on_https">Turn on Https</string>
+</resources>
